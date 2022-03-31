@@ -1,0 +1,43 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(tidyverse)
+library(EchoNet2Fish)
+# second package is at https://github.com/JVAdams/EchoNet2Fish
+options(scipen=999)
+
+# Read in and concatenate all Sv exprt csv files in a folder
+sv <- EchoNet2Fish::readSVTS("./data/Sv/", oldname = NULL, newname = NULL, elimMiss = NULL,
+               datevars = c("Date_S", "Date_E", "Date_M"), addyear = TRUE,
+               tidy = TRUE)%>%
+  select(Region_name, Interval, Layer, PRC_ABC)
+
+# Read in and concatenate all TS exprt csv files in a folder. Must be in the
+# TS frequency distribution format.
+TS <- EchoNet2Fish::readSVTS("./data/TS/", oldname = NULL, newname = NULL, elimMiss = NULL,
+         datevars = c("Date_S", "Date_E", "Date_M"), addyear = TRUE,
+         tidy = TRUE)
+
+
+# this function calculates the mean sigma # for each row of the data frame within the TS range selected with TSrange=
+TS$sigma <- EchoNet2Fish::sigmaAvg(TS, TSrange=c(-60, -26)) 
+
+# merge sv and ts data together by Region_name (equals transect here)
+svts <- merge(sv, TS, by = c("Region_name", "Interval", "Layer"))%>%
+  mutate(nph = 10000 * (PRC_ABC/sigma))%>%
+  select(Region_name, Interval, Layer, Layer_depth_min, Layer_depth_max, nph)
+
+ggplot()+
+  geom_histogram(data=svts, aes(x=nph))
+
+
+```
+
+
